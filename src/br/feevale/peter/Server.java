@@ -8,16 +8,24 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 
+import server.ServerRMI;
 import br.feevale.peter.log.Logger;
+import client.ClientRMI;
 
 import comm.Message;
 
-import server.ServerRMI;
-import client.ClientRMI;
 import exeception.PeterException;
 
-public class Server implements ServerRMI {
+public class Server extends UnicastRemoteObject implements ServerRMI {
+
+	private static final long serialVersionUID = -4539027311061848296L;
+
+	protected Server() throws RemoteException {
+		super();
+		// TODO Auto-generated constructor stub
+	}
 
 	private Integer port;
 	private BufferedReader br;
@@ -37,7 +45,7 @@ public class Server implements ServerRMI {
 
 	private void registryServer() throws RemoteException, MalformedURLException {
 		r = LocateRegistry.createRegistry( port );
-		r.rebind( String.format( ServerRMI.FORMAT_URL_SERVER, "localhost", port ), this );
+		Naming.rebind(String.format( ServerRMI.FORMAT_URL_SERVER, "localhost", port ), this);
 	}
 
 	private void readPort() throws Exception {
@@ -51,7 +59,7 @@ public class Server implements ServerRMI {
 	}
 
 	@Override
-	public void registryClientForCallBack( ClientRMI client ) throws PeterException {
+	public void registryClientForCallBack( ClientRMI client ) throws RemoteException {
 		
 		try{
 			String url = String.format( ClientRMI.FORMAT_URL_CLIENT, client.getHostname(), client.getPort(), client.getName());
@@ -62,13 +70,13 @@ public class Server implements ServerRMI {
 	}
 
 	@Override
-	public void disconnectClient( ClientRMI client ) throws PeterException {
-		try{
-			String url = String.format( ClientRMI.FORMAT_URL_CLIENT, client.getName());
-			Naming.unbind( url );
-		}catch(Exception e){
-			throw new PeterException( e.getMessage(), e.getCause() );
-		}
+	public void disconnectClient( ClientRMI client ) throws RemoteException {
+//		try{
+//			String url = String.format( ClientRMI.FORMAT_URL_CLIENT, client.getName());
+//			Naming.unbind( url );
+//		}catch(Exception e){
+//			throw new PeterException( e.getMessage(), e.getCause() );
+//		}
 	}
 
 	public Integer getPort() {
@@ -76,7 +84,7 @@ public class Server implements ServerRMI {
 	}
 
 	@Override
-	public String[] list() throws PeterException {
+	public String[] list() throws RemoteException {
 		try {
 			return r.list();
 		} catch( RemoteException e ) {
@@ -86,7 +94,7 @@ public class Server implements ServerRMI {
 	}
 
 	@Override
-	public void sendMessage( Message msg ) throws PeterException {
+	public void sendMessage( Message msg ) throws RemoteException {
 		try {
 			ClientRMI c = (ClientRMI) Naming.lookup( String.format( ClientRMI.FORMAT_URL_CLIENT, msg.getSender() ) );
 			c.receiveMessage( msg );
