@@ -4,9 +4,14 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.rmi.Naming;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+
+import br.feevale.peter.log.Logger;
+
+import comm.Message;
 
 import server.ServerRMI;
 import client.ClientRMI;
@@ -16,6 +21,7 @@ public class Server implements ServerRMI {
 
 	private Integer port;
 	private BufferedReader br;
+	private Registry r;
 
 	public  void start() {
 		prepareToReadConsole();
@@ -30,8 +36,7 @@ public class Server implements ServerRMI {
 	}
 
 	private void registryServer() throws RemoteException, MalformedURLException {
-		Registry r = null;
-			r = LocateRegistry.createRegistry( port );
+		r = LocateRegistry.createRegistry( port );
 		r.rebind( String.format( ServerRMI.FORMAT_URL_SERVER, "localhost", port ), this );
 	}
 
@@ -59,7 +64,7 @@ public class Server implements ServerRMI {
 	@Override
 	public void disconnectClient( ClientRMI client ) throws PeterException {
 		try{
-			String url = String.format( ClientRMI.FORMAT_URL_CLIENT, client.getHostname(), client.getPort(), client.getName());
+			String url = String.format( ClientRMI.FORMAT_URL_CLIENT, client.getName());
 			Naming.unbind( url );
 		}catch(Exception e){
 			throw new PeterException( e.getMessage(), e.getCause() );
@@ -68,5 +73,25 @@ public class Server implements ServerRMI {
 
 	public Integer getPort() {
 		return port;
+	}
+
+	@Override
+	public String[] list() throws PeterException {
+		try {
+			return r.list();
+		} catch( RemoteException e ) {
+			Logger.error( e );
+			return null;
+		}
+	}
+
+	@Override
+	public void sendMessage( Message msg ) throws PeterException {
+		try {
+			ClientRMI c = (ClientRMI) Naming.lookup( String.format( ClientRMI.FORMAT_URL_CLIENT, msg.getSender() ) );
+			c.receiveMessage( msg );
+		} catch( MalformedURLException | RemoteException | NotBoundException e ) {
+			Logger.error( e );
+		}
 	}
 }
